@@ -14,7 +14,7 @@ var context = canvas.getContext('2d');
 var wedgeColorA = '#006400';
 var wedgeColorB = '#FFFAFA';
 var wedgeColorC = '#B22222';
-var wedgeColorD = '#FFD700';
+var wedgeColorD = '#FFFAFA';
 var wedgeSubdiv;
 var wheelRotation = 90;
 var rotationSpeed = 0;
