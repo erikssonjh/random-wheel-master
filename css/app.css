@@ -24,14 +24,14 @@ main {
 #buttons button {
     width: 50%;
     border-radius: 0;
-    border: thin solid #353535;
-    background-color: black;
+    border: thin solid #006400;
+    background-color: green;
     transition: all 300ms;
 }
 
 #buttons button:hover {
     transition: all 300ms;
-    background-color: white;
+    background-color: red;
     color: black;
 }
 
