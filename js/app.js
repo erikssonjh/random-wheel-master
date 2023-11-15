@@ -39,7 +39,7 @@ var name_lists = [
   ['John', 'Marie', 'Peppis', 'Wallberg', 'Niklas', 'PO', 'Viktor', 'Gustav', 'Ivan', 'Tobias', 'Larsson', 'Martin'],
   ];
 
-var blank_message = 'Add some values in the pane.';
+var blank_message = 'Jaha, ingen på plats idag?';
 var is_mobile = false;
 var last_width = 0;
 var dirty = false;
