@@ -258,7 +258,7 @@ function loop() {
     context.restore();
   }
 
-  fillColor('#000000');
+  fillColor('#FFFFFF');
   context.beginPath();
   context.moveTo(CANVAS_MID_X + canvas.width / 32, canvas.height / 64);
   context.lineTo(CANVAS_MID_X - canvas.width / 32, canvas.height / 64);
