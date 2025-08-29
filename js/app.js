@@ -36,7 +36,7 @@ var wedge_text_position = .65; // Distance Along Radius
 
 var nameList = [];
 var name_lists = [
-  ['John', 'Marie', 'Jesper', 'Wallberg', 'Niklas', 'PO', 'Viktor', 'Gustav', 'Ivan','Denny', 'Tobias', 'Larsson', 'Martin'],
+  ['John', 'Marie', 'Daniel', 'Wallberg', 'Niklas', 'PO', 'Tommy', 'Gustav', 'Ivan','Denny', 'Tobias', 'Larsson', 'Martin'],
   ];
 
 var blank_message = 'Jaha, ingen på plats idag?';
