@@ -53,20 +53,28 @@ function setup() {
   WHEEL_RADIUS = CANVAS_MID_X * WHEEL_PERCENTAGE;
   lastTime = Date.now();
 
-  var saved_list = JSON.parse(localStorage.getItem('wheel_items'));
+  var saved_list = null;
+  try {
+    saved_list = JSON.parse(localStorage.getItem('wheel_items'));
+  } catch (e) {
+    saved_list = null;
+  }
 
-  if (!saved_list || !saved_list.length) {
-    nameList = name_lists[getRandomInt(0, name_lists.length)];
+  if (!Array.isArray(saved_list) || !saved_list.length) {
+    nameList = name_lists[getRandomInt(0, name_lists.length)].slice();
   } else {
     nameList = saved_list;
   }
 
-  var hash = window.location.hash;
-  var hashString = hash.substr(1, hash.length - 1);
+  var hashString = window.location.hash.substring(1);
   if (hashString.length) {
-    var queryList = JSON.parse(decodeURIComponent(hashString));
-    if (queryList.length) {
-      nameList = queryList;
+    try {
+      var queryList = JSON.parse(decodeURIComponent(hashString));
+      if (Array.isArray(queryList) && queryList.length) {
+        nameList = queryList;
+      }
+    } catch (e) {
+      // Ogiltig länk – ignorera och använd sparad lista
     }
   }
 
@@ -110,7 +118,13 @@ function clearList() {
 }
 
 function copyLink() {
-  clipboard.innerText = encodeURI( window.location.href + '#' + JSON.stringify(nameList) );
+  var base = window.location.href.split('#')[0];
+  var link = base + '#' + encodeURIComponent(JSON.stringify(nameList));
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(link);
+    return;
+  }
+  clipboard.value = link;
   clipboard.select();
   document.execCommand('copy');
   clipboard.blur();
@@ -119,8 +133,8 @@ function copyLink() {
 function resizeCanvas() {
   canvas.width = is_mobile ? mobile_canvas_size : desktop_canvas_size;
   canvas.height = is_mobile ? mobile_canvas_size : desktop_canvas_size;
-  canvas.style.width = is_mobile ? mobile_canvas_size : desktop_canvas_size;
-  canvas.style.height = is_mobile ? mobile_canvas_size : desktop_canvas_size;
+  canvas.style.width = (is_mobile ? mobile_canvas_size : desktop_canvas_size) + 'px';
+  canvas.style.height = (is_mobile ? mobile_canvas_size : desktop_canvas_size) + 'px';
   CANVAS_MID_X = canvas.width / 2;
   CANVAS_MID_Y = canvas.height / 2;
   WHEEL_RADIUS = CANVAS_MID_X * WHEEL_PERCENTAGE;
