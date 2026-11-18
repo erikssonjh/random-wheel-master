@@ -1,0 +1,120 @@
+From 43562aec18e7edb97c337ddc8c871f0a547beb96 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 13:17:58 +0100
+Subject: [PATCH] =?UTF-8?q?Samma=20chans=20f=C3=B6r=20alla=20varje=20dag?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Vinnare tas inte längre bort ur hjulet. Vinnarhistoriken finns kvar
+och visas i listan.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LYWNUdmqqH1eqGzVyxseQy
+---
+ README.md   |  4 ++--
+ css/app.css |  4 ----
+ js/app.js   | 36 ++++++++----------------------------
+ 3 files changed, 10 insertions(+), 34 deletions(-)
+
+diff --git a/README.md b/README.md
+index 5d27650..afe1e5b 100644
+--- a/README.md
++++ b/README.md
+@@ -4,12 +4,12 @@ Ett hjul som slumpar fram vem som får öppna dagens lucka. Byggt för att köra
+ 
+ ### Så används det
+ - **Snurra:** tryck på *Snurra!*, på hjulet eller på OK/Enter.
+-- **Vinnaren** visas i stor text. *Spara vinnaren* sparar och tar bort personen ur hjulet. *Snurra om* drar på nytt utan att spara.
++- **Vinnaren** visas i stor text. *Spara vinnaren* sparar vinnaren för luckan. *Snurra om* drar på nytt utan att spara.
+ - **Lucka:** sätts automatiskt till dagens datum (1–24 december). Byt med ◀ ▶ eller vänster- och högerpil, till exempel för helgluckor.
+ - **Borta idag:** tryck på ett namn i listan. Det gäller bara idag.
+ - **Gäst:** skriv ett namn och tryck +. Gäster är med bara idag.
+ - **Vinnare hittills:** tryck på en rad för att ta bort en felaktig vinnare.
+-- När alla har vunnit en gång är alla med i hjulet igen.
++- Alla som är på plats är med i hjulet varje dag, även de som vunnit tidigare. Alla har alltså samma chans varje dag.
+ - Utanför 1–24 december körs en **testdragning**, och då sparas ingenting.
+ 
+ ### Ändra deltagare
+diff --git a/css/app.css b/css/app.css
+index ff47d09..68a27bc 100644
+--- a/css/app.css
++++ b/css/app.css
+@@ -193,10 +193,6 @@ button:focus, input:focus {
+     opacity: .45;
+ }
+ 
+-.list-item.waiting {
+-    opacity: .6;
+-}
+-
+ .list-item .tag {
+     font-size: .8em;
+     opacity: .7;
+diff --git a/js/app.js b/js/app.js
+index 0823c5d..cb3beef 100644
+--- a/js/app.js
++++ b/js/app.js
+@@ -166,16 +166,6 @@
+     return baseNames.indexOf(name) < 0 && state.guests.names.indexOf(name) >= 0;
+   }
+ 
+-  // Vinster som räknas – den lucka som dras just nu räknas inte, så att man kan dra om den
+-  function winsFor(name) {
+-    var c = 0;
+-    for (var i = 0; i < state.history.length; i++) {
+-      var h = state.history[i];
+-      if (h.namn === name && h.lucka !== lucka) c++;
+-    }
+-    return c;
+-  }
+-
+   function luckorWonBy(name) {
+     var res = [];
+     for (var i = 0; i < state.history.length; i++) {
+@@ -192,22 +182,13 @@
+     return null;
+   }
+ 
+-  // Alla närvarande som har vunnit minst antal gånger. När alla har vunnit
+-  // en gång börjar det alltså om automatiskt.
++  // Alla som är på plats är med i hjulet varje dag – samma chans för alla,
++  // oavsett om man vunnit tidigare.
+   function computeWheel() {
+     var all = participants();
+-    var present = [];
+-    var min = Infinity;
+-    var i;
+-    for (i = 0; i < all.length; i++) {
+-      if (!isAbsent(all[i])) {
+-        present.push(all[i]);
+-        min = Math.min(min, winsFor(all[i]));
+-      }
+-    }
+     var res = [];
+-    for (i = 0; i < present.length; i++) {
+-      if (winsFor(present[i]) === min) res.push(present[i]);
++    for (var i = 0; i < all.length; i++) {
++      if (!isAbsent(all[i])) res.push(all[i]);
+     }
+     return res;
+   }
+@@ -257,11 +238,10 @@
+         if (isAbsent(name)) {
+           btn.className += ' absent';
+           tag = 'borta idag';
+-        } else if (wheelNames.indexOf(name) < 0) {
+-          btn.className += ' waiting';
+-          tag = 'vann lucka ' + luckorWonBy(name).join(', ');
+-        } else if (isGuest(name)) {
+-          tag = 'gäst';
++        } else {
++          var won = luckorWonBy(name);
++          if (isGuest(name)) tag = 'gäst';
++          if (won.length) tag += (tag ? ', ' : '') + 'vann lucka ' + won.join(', ');
+         }
+         if (tag) btn.appendChild(el('span', 'tag', tag));
+         btn.setAttribute('data-name', name);
+-- 
+2.43.0
+

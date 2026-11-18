@@ -1,0 +1,2039 @@
+From a0bffdf710387599b279a473ad4dfea1db970b95 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 18 Nov 2026 13:15:27 +0100
+Subject: [PATCH] TV-anpassat hjul med vinnarruta, lucka och vinnarhistorik
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Hjulet skalar efter skärmen och namnen krymps så att de får plats
+- Fjärrkontroll: OK/Enter snurrar, pilar flyttar markering och byter lucka
+- Vinnaren visas i stor text och kan sparas eller dras om
+- Vinnare tas ur hjulet tills alla har vunnit en gång
+- Lucka sätts efter datum, testläge utanför 1-24 december
+- Borta idag och gäster gäller bara aktuell dag
+- Deltagare läses från names.json
+- Tar bort oanvänd CSS och Font Awesome
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LYWNUdmqqH1eqGzVyxseQy
+---
+ README.md                  |  21 +-
+ css/app.css                | 372 ++++++++++-----
+ css/lib/app_layout.css     | 285 ------------
+ css/lib/element_styles.css |  57 ---
+ css/lib/grid_styles.css    |  90 ----
+ index.html                 |  90 ++--
+ js/app.js                  | 914 +++++++++++++++++++++++++------------
+ names.json                 |  17 +
+ 8 files changed, 962 insertions(+), 884 deletions(-)
+ delete mode 100644 css/lib/app_layout.css
+ delete mode 100644 css/lib/element_styles.css
+ delete mode 100644 css/lib/grid_styles.css
+ create mode 100644 names.json
+
+diff --git a/README.md b/README.md
+index 4d0ff63..5d27650 100644
+--- a/README.md
++++ b/README.md
+@@ -1,7 +1,22 @@
+-## Random Wheel
++## Julkul – lyckohjul för julkalendern
+ 
+-<img src='http://i.imgur.com/BW9WbDg.png' width=450/>
++Ett hjul som slumpar fram vem som får öppna dagens lucka. Byggt för att köras i webbläsaren på en TV, men fungerar även på dator och mobil.
+ 
+-A wheel that picks random entries from a user-provided list.
++### Så används det
++- **Snurra:** tryck på *Snurra!*, på hjulet eller på OK/Enter.
++- **Vinnaren** visas i stor text. *Spara vinnaren* sparar och tar bort personen ur hjulet. *Snurra om* drar på nytt utan att spara.
++- **Lucka:** sätts automatiskt till dagens datum (1–24 december). Byt med ◀ ▶ eller vänster- och högerpil, till exempel för helgluckor.
++- **Borta idag:** tryck på ett namn i listan. Det gäller bara idag.
++- **Gäst:** skriv ett namn och tryck +. Gäster är med bara idag.
++- **Vinnare hittills:** tryck på en rad för att ta bort en felaktig vinnare.
++- När alla har vunnit en gång är alla med i hjulet igen.
++- Utanför 1–24 december körs en **testdragning**, och då sparas ingenting.
+ 
++### Ändra deltagare
++Redigera `names.json` och pusha till `main`. Siten uppdateras automatiskt via GitHub Actions.
+ 
++### Testa ett visst datum
++Lägg till `?datum=2026-12-05` sist i adressen.
++
++### Var sparas vinnarna?
++I webbläsarens lagring (localStorage) på den enhet där man snurrar, alltså TV:n. Byter ni enhet följer historiken inte med.
+diff --git a/css/app.css b/css/app.css
+index 740e88c..ff47d09 100644
+--- a/css/app.css
++++ b/css/app.css
+@@ -1,186 +1,316 @@
+-body {
++/* Julkul – layout för TV (1920x1080 / 960x540) men fungerar även på dator och mobil */
++
++* {
++    box-sizing: border-box;
++}
++
++html, body {
++    margin: 0;
++    padding: 0;
++    height: 100%;
++    background: #f6f1e7;
++    color: #1b1b1b;
++    font-family: 'Josefin Sans', Arial, sans-serif;
++    overflow: hidden;
++}
++
++.letterhead {
++    height: 9vh;
++    min-height: 48px;
++    background-color: #B22222;
++    color: white;
+     display: flex;
+-    margin-top: 32px;
+-    justify-content: space-between;
+-    font-family: sans-serif;
+-    flex-direction: column;
+     align-items: center;
++    justify-content: center;
++    font-size: 4vh;
++    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
++}
++
++.letterhead .brand {
++    font-size: .8em;
++    opacity: .85;
+ }
+ 
+ main {
++    height: 91vh;
+     display: flex;
+     flex-direction: row;
+-    justify-content: space-around;
+-    flex-wrap: wrap;
+-    width: 100%;
+-    max-width: 920px;
++    align-items: center;
++    justify-content: center;
++    padding: 2vh 2vw;
+ }
+ 
+-#ad-unit {
+-    width: 65%;
+-    margin: auto;
++#wheel-wrap {
++    flex: 0 0 auto;
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    margin-right: 3vw;
+ }
+ 
+-#buttons button {
+-    width: 50%;
+-    border-radius: 0;
+-    border: thin solid #006400;
+-    background-color: green;
+-    transition: all 300ms;
++#canvas {
++    display: block;
++    cursor: pointer;
+ }
+ 
+-#buttons button:hover {
+-    transition: all 300ms;
+-    background-color: red;
+-    color: black;
++.panel {
++    flex: 0 1 30vw;
++    max-width: 520px;
++    height: 100%;
++    display: flex;
++    flex-direction: column;
++    background: white;
++    border: 4px solid #1b1b1b;
++    border-radius: 12px;
++    padding: 1.5vh 1.2vw;
++    font-size: 2.2vh;
+ }
+ 
++.panel h2 {
++    font-size: 2.4vh;
++    margin: 1.4vh 0 .6vh;
++}
+ 
+-#spin-wheel {
+-    background-color: #006400;
+-    font-size: 1.45em;
+-    height: 3em;
+-    width: 100%;
+-    font-style: italic;
++.hint {
++    font-weight: normal;
++    font-size: .75em;
++    opacity: .6;
+ }
+ 
+-#buttons {
++#lucka-row {
+     display: flex;
+-    padding: 0;
+-    margin: 0;
++    align-items: center;
++    justify-content: space-between;
+ }
+ 
+-#wedge-list {
+-    flex-grow: 0;
+-    overflow-y: scroll;
+-    height: 350px;
+-    border-radius: 4px 4px 0 0;
+-    border: thin solid #eaeaea;
+-    box-shadow: inset 0 0 2px 1px rgba(151, 151, 151, 0.09);
++#lucka-label {
++    font-size: 5vh;
++    font-weight: bold;
++    color: #B22222;
++    text-align: center;
++    flex: 1;
+ }
+ 
++#lucka-info {
++    text-align: center;
++    min-height: 2.6vh;
++    font-size: 2vh;
++    opacity: .75;
++    margin-bottom: 1vh;
++}
++
++button {
++    font-family: inherit;
++    cursor: pointer;
++}
+ 
+-.name-entry button {
+-    border-radius: 0;
++.big-btn {
++    width: 100%;
++    font-size: 4.5vh;
++    font-weight: bold;
++    padding: 1.6vh 0;
++    border: none;
++    border-radius: 10px;
++    background: #006400;
++    color: white;
++    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+ }
+ 
+-.remove-wedge {
+-    background-color: #8e8e8e;
++.big-btn:disabled {
++    background: #8a8a8a;
++    cursor: default;
+ }
+ 
+-.right-pane {
+-    border: 4px solid black;
+-    border-radius: 8px 8px 0 0;
+-    padding: 8px;
+-    margin: 8px;
+-    display: flex;
+-    justify-content: space-between;
+-    flex-direction: column;
+-    width: 256px;
++.big-btn.secondary {
++    background: #555;
+ }
+ 
++.small-btn {
++    font-size: 3vh;
++    min-width: 6vh;
++    height: 6vh;
++    border: none;
++    border-radius: 8px;
++    background: #006400;
++    color: white;
++}
+ 
+-#canvas {
+-    padding-left: 0;
+-    padding-right: 0;
+-    display: block;
+-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+-    border: 3px solid black;
+-    border-radius: 300px;
+-    width: 512px;
+-    height: 512px;
++.small-btn:disabled {
++    visibility: hidden;
+ }
+ 
++.link-btn {
++    background: none;
++    border: none;
++    color: #777;
++    font-size: 1.7vh;
++    text-decoration: underline;
++    margin-top: .8vh;
++    padding: .4vh;
++}
+ 
+-/*Label With Action*/
+-.labeled-action {
+-    margin: 8px;
+-    height: 32px;
++/* Tydlig markering när man flyttar med fjärrkontrollens piltangenter */
++button:focus, input:focus {
++    outline: 0.6vh solid #FFD700;
++    outline-offset: 0.3vh;
++}
++
++.list {
++    overflow-y: auto;
++    border: 1px solid #ddd;
++    border-radius: 6px;
++    padding: .4vh;
++}
++
++#name-list {
++    flex: 1 1 auto;
++    min-height: 10vh;
++}
++
++#winner-list {
++    flex: 0 1 auto;
++    max-height: 22vh;
++    min-height: 4vh;
++}
++
++.list-item {
+     display: flex;
+-    flex-direction: row;
+-    justify-content: space-between;
++    width: 100%;
+     align-items: center;
+-    border-top-left-radius: 4px;
+-    border-bottom-left-radius: 4px;
+-    box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.12);
+-    text-overflow: ellipsis;
++    justify-content: space-between;
++    border: none;
++    background: #f1f1f1;
++    border-radius: 6px;
++    margin: .3vh 0;
++    padding: .7vh 1vh;
++    font-size: 2.3vh;
++    text-align: left;
++    color: #1b1b1b;
+ }
+ 
+-.labeled-action div {
+-    padding: 8px;
+-    text-overflow: ellipsis;
+-    display: block;
++.list-item.absent {
++    text-decoration: line-through;
++    opacity: .45;
++}
++
++.list-item.waiting {
++    opacity: .6;
++}
++
++.list-item .tag {
++    font-size: .8em;
++    opacity: .7;
++    margin-left: 1vh;
+     white-space: nowrap;
+-    overflow: hidden;
++    text-decoration: none;
++}
++
++.list-empty {
++    opacity: .5;
++    padding: .7vh 1vh;
++    font-style: italic;
+ }
+ 
+-.labeled-action input {
+-    padding-left: 4px;
+-    font-size: 14px;
+-    border-style: none;
+-    flex-grow: .7;
++.add-row {
++    display: flex;
++    margin-top: 1.2vh;
+ }
+ 
+-input:focus {
+-    outline: none;
++.add-row input {
++    flex: 1;
++    min-width: 0;
++    font-size: 2.3vh;
++    padding: 0 1vh;
++    border: 1px solid #bbb;
++    border-radius: 8px 0 0 8px;
++    font-family: inherit;
+ }
+ 
+-.labeled-action button {
+-    height: 32px;
+-    width: 32px;
+-    background-color: #006400;
+-    color: white;
+-    border-bottom-right-radius: 4px;
+-    border-top-right-radius: 4px;
+-    border-style: none;
+-    flex-shrink: 0;
++.add-row .small-btn {
++    border-radius: 0 8px 8px 0;
+ }
+ 
+-.labeled-action button:active {
+-    outline: none;
+-    box-shadow: inset 0 3px 5px 0 rgba(0, 0, 0, 0.12);
++/* Vinnarrutan */
++#overlay {
++    position: fixed;
++    top: 0;
++    left: 0;
++    right: 0;
++    bottom: 0;
++    background: rgba(0, 0, 0, 0.65);
++    display: flex;
++    align-items: center;
++    justify-content: center;
++    z-index: 10;
+ }
+ 
+-.labeled-action button:focus {
+-    outline: none;
++#overlay.hidden {
++    display: none;
+ }
+ 
+-.labeled-action button:hover {
+-    transition: all 300ms;
+-    background-color: white;
+-    color: black;
+-    border: thin solid black;
++.overlay-box {
++    background: #fffdf5;
++    border: 1vh solid #B22222;
++    border-radius: 3vh;
++    padding: 5vh 6vw;
++    text-align: center;
++    min-width: 50vw;
++    box-shadow: 0 2vh 6vh rgba(0, 0, 0, 0.5);
+ }
+ 
+-.footer {
+-    margin-top: 16px;
+-    opacity: .5;
+-    text-decoration: none;
++.overlay-title {
++    font-size: 6vh;
++    color: #006400;
+ }
+ 
+-.footer a {
+-    text-decoration: none;
++#overlay-name {
++    font-size: 16vh;
++    font-weight: bold;
++    color: #B22222;
++    line-height: 1.1;
++    margin: 2vh 0;
++    word-break: break-word;
+ }
+ 
+-@media (max-width: 425px) {
+-    main {
+-        flex-direction: column-reverse;
+-        align-items: center;
+-        justify-content: flex-start;
+-        width: 100VW !important;
+-        max-width: initial !important;
++#overlay-lucka {
++    font-size: 5vh;
++    margin-bottom: 4vh;
++}
++
++.overlay-buttons {
++    display: flex;
++}
++
++.overlay-buttons .big-btn {
++    margin: 0 1vw;
++}
++
++/* Mobil / smal skärm */
++@media (max-width: 700px) {
++    html, body {
++        overflow: auto;
+     }
+ 
+-    #canvas {
+-        width: 90vw;
+-        height: 90vw;
++    main {
++        height: auto;
++        flex-direction: column;
+     }
+ 
+-    .right-pane {
+-        width: 85%;
++    #wheel-wrap {
++        margin: 0 0 2vh 0;
+     }
+ 
+-    #wedge-list {
+-        height: 256px;
++    .panel {
++        width: 100%;
++        max-width: none;
++        height: auto;
++        font-size: 16px;
+     }
++
++    .panel h2 { font-size: 17px; }
++    .list-item, .add-row input { font-size: 16px; }
++    #lucka-label { font-size: 30px; }
++    .big-btn { font-size: 26px; }
++    .small-btn { font-size: 20px; height: 44px; min-width: 44px; }
++    #name-list { max-height: 40vh; }
+ }
+diff --git a/css/lib/app_layout.css b/css/lib/app_layout.css
+deleted file mode 100644
+index 586fa3a..0000000
+--- a/css/lib/app_layout.css
++++ /dev/null
+@@ -1,285 +0,0 @@
+-body {
+-    font-family: Arial, serif;
+-    margin: 0;
+-    font-size: 14px;
+-    color: black;
+-    padding: 0;
+-    height: 100%;
+-}
+-
+-/* Typography */
+-hr {
+-    opacity: .5;
+-    width: 100%;
+-}
+-
+-main {
+-    margin-top: 72px;
+-}
+-
+-p {
+-    font-family: serif;
+-    text-indent: 2em;
+-}
+-
+-a:visited {
+-    color: black;
+-    text-decoration: none;
+-}
+-
+-.subtext {
+-    text-align: center;
+-    font-style: italic;
+-    font-size: .75rem;
+-    font-family: serif;
+-}
+-
+-/* Header & Nav*/
+-.letterhead {
+-    box-shadow: -1px 5px 7px 3px rgba(0,0,0,0.12);
+-    background-color: #B22222;
+-    color: white;
+-    align-items: center;
+-    display: flex;
+-    position: absolute;
+-    justify-content: space-between;
+-    height: 64px;
+-    font-size: 18px;
+-    width: 100%;
+-    z-index: 2;
+-    opacity: 1;
+-    transition: opacity 1s;
+-}
+-
+-.letterhead .letterhead-content {
+-    height: 100%;
+-    width: 90%;
+-    margin: auto;
+-    display: flex;
+-    justify-content: space-between;
+-    align-items: center;
+-}
+-
+-#site-nav {
+-    z-index: 1;
+-    position: absolute;
+-    padding-top: 63px;
+-    width: 100%;
+-    display: flex;
+-    justify-content: space-around;
+-    background-color: #777777;
+-    color: white;
+-    text-decoration: none;
+-    height: 29px;
+-    line-height: 29px;
+-}
+-
+-#site-nav a {
+-    background-color: #777777;
+-    color: white;
+-    text-align: center;
+-    border-radius: 0 15px 0 0;
+-    padding-left: 8px;
+-    padding-right: 12px;
+-    transition: background-color 100ms;
+-    text-decoration: none;
+-}
+-
+-#site-nav a:hover{
+-    background-color: #e5e5e5;
+-    color: black;
+-}
+-
+-#site-nav a:visited {
+-    text-decoration: none;
+-    color: white;
+-}
+-
+-#site-nav a:active {
+-    text-decoration: none;
+-    color: white;
+-}
+-
+-#mobile-nav-toggle {
+-    font-size: 24px;
+-}
+-
+-
+-/* Main Content*/
+-.content-container {
+-    z-index: 0;
+-    display: flex;
+-    width: 90%;
+-    max-width: 1020px;
+-    margin: 12px auto 24px;
+-    flex-wrap: wrap;
+-    color: black;
+-    background-color: white;
+-    border-radius: 3px;
+-    box-shadow: 0 0 6px 1px rgba(0,0,0,0.12);
+-    position: absolute;
+-    top: 100px;
+-    left: 5%;
+-    right: 5%;
+-    padding-top: 16px;
+-    justify-content: center;
+-}
+-
+-/** Neutral styling to forgo the card aesthetic **/
+-.content-container-clean {
+-    display: flex;
+-    width: 90%;
+-    max-width: 720px;
+-    justify-content: space-between;
+-    margin: 12px auto 24px;
+-    flex-wrap: wrap;
+-    color: black;
+-    border-radius: 3px;
+-    position: absolute;
+-    top: 100px;
+-    left: 5%;
+-    right: 5%;
+-}
+-
+-/* Structural */
+-.row {
+-    display: flex;
+-    width: 100%;
+-    justify-content: space-between;
+-    flex-wrap: wrap;
+-    text-align: left;
+-    padding: 0 16px;
+-    flex-direction: row;
+-}
+-
+-.column {
+-    display: flex;
+-    flex-direction: column;
+-    align-items: center;
+-    width: 100%;
+-    margin: 0;
+-}
+-
+-.al-left {
+-    align-items: left;
+-}
+-
+-.al-right {
+-    align-items: right;
+-}
+-
+-.al-center {
+-    align-items: center;
+-}
+-
+-/* Vertical Ruling */
+-.vr {
+-    background-color: darkgray;
+-    width: 1px;
+-    height: 45px;
+-}
+-
+-.center {
+-    text-align: center;
+-    margin: 8px auto;
+-}
+-
+-.header > :first-child {
+-    border-bottom: white;
+-    border-bottom: solid;
+-    border-width: thin;
+-    margin: 0 0 8px;
+-    font-size: 1em;
+-}
+-
+-.footer {
+-    width: 100%;
+-    height: 32px;
+-    line-height: 32px;
+-    text-align: center;
+-    color: #828282;
+-    font-style: italic;
+-}
+-
+-/*Mobile Considerations*/
+-@media (max-width: 425px) {
+-    .letterhead {
+-        font-size: .9em;
+-        position: fixed;
+-        z-index: 999;
+-    }
+-
+-    .cover-open #site-nav{
+-        display: none !important;
+-    }
+-
+-    #site-nav {
+-        display: flex;
+-        position: fixed;
+-        z-index: 3;
+-        height: 199%;
+-        flex-direction: column;
+-        background-color: rgba(0, 0, 0, 0.3);
+-        align-items: flex-end;
+-        justify-content: flex-start;
+-        padding-top: 65px;
+-        transition: right 300ms;
+-        width: 130px;
+-        right: 0;
+-    }
+-
+-    #site-nav a {
+-        opacity: .8;
+-        background-color: black;
+-        font-family: sans-serif;
+-        font-weight: 100;
+-        transition: none;
+-        font-size: 1.2em;
+-        width: 110px;
+-        text-align: right;
+-        border-radius: 0;
+-        border-bottom: solid;
+-        border-width: thin;
+-        padding-top: 18px;
+-        padding-bottom: 18px;
+-    }
+-
+-    #site-nav a:hover {
+-        transition: none;
+-        background-color: black;
+-        color: white;
+-    }
+-
+-    #site-nav.hidden {
+-        right: -100%;
+-    }
+-
+-    .content-container {
+-        left: 5%;
+-        right: 5%;
+-    }
+-
+-    .full-width-mobile {
+-        width: 100% !important;
+-    }
+-
+-    .hide-mobile {
+-        display: none;
+-    }
+-
+-    .no-pad-mobile {
+-        padding-left: 0 ;
+-        padding-right: 0 ;
+-    }
+-
+-    #page-nav {
+-        display: flex;
+-        position: absolute;
+-        height: 75vh;
+-        top: 0;
+-        margin: 0;
+-        width: 100%;
+-        left: 0;
+-        padding: 0;
+-    }
+-}
+\ No newline at end of file
+diff --git a/css/lib/element_styles.css b/css/lib/element_styles.css
+deleted file mode 100644
+index 9041e16..0000000
+--- a/css/lib/element_styles.css
++++ /dev/null
+@@ -1,57 +0,0 @@
+-/* Button Look And Feels */
+-.stock {
+-    border-style: none;
+-    color: white;
+-    width: 128px;
+-    height: 32px;
+-    font-size: 14px;
+-    box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+-    font-weight: bold;
+-    outline: none;
+-    text-transform: uppercase;
+-    border-radius: 3px;
+-    transition: box-shadow .025s;
+-}
+-
+-.stock:active {
+-    box-shadow: 0 0 0;
+-    transition: box-shadow .025s;
+-}
+-
+-.stock.login {
+-    background-color: #00cc66;
+-}
+-
+-.stock.logout {
+-    background-color: #cc3d00;
+-}
+-
+-.bespoke {
+-    background-color: white;
+-    color: darkgrey;
+-    width: 12em;
+-    height: 32px;
+-    font-size: 12px;
+-    box-shadow: 0 1px 1px rgba(0,0,0,0.12);
+-    text-align: center;
+-    border: thin solid darkgrey;
+-    outline: none;
+-    text-transform: uppercase;
+-    font-style: italic;
+-    font-family: 'Times New Roman', serif;
+-    padding: 0;
+-    margin: 0;
+-    display: inline-flex;
+-    justify-content: center;
+-    transition: box-shadow .025s;
+-}
+-
+-.bespoke:active {
+-    box-shadow: 0 0 0;
+-    transition: box-shadow .025s;
+-}
+-
+-.bespoke.login {
+-    background-color: #3B3D3D;
+-    color: white;
+-}
+diff --git a/css/lib/grid_styles.css b/css/lib/grid_styles.css
+deleted file mode 100644
+index e84236c..0000000
+--- a/css/lib/grid_styles.css
++++ /dev/null
+@@ -1,90 +0,0 @@
+-/*Container Debuggers*/
+-/*.row {*/
+-    /*background-color: rgba(0, 130, 204, 0.23);*/
+-    /*border: 1px solid rgba(0, 130, 204, 0.2);*/
+-    /*box-sizing: border-box;*/
+-/*}*/
+-
+-/*.column {*/
+-    /*background-color: rgba(204, 0, 2, 0.19);*/
+-    /*box-shadow: 0 0 3px rgba(204, 0, 2, 0.19);*/
+-    /*padding: 16px;*/
+-    /*box-sizing: border-box;*/
+-/*}*/
+-
+-.no-h-pad {
+-    padding-left: 0;
+-    padding-right: 0;
+-}
+-
+-.no-pad {
+-    padding: 0;
+-}
+-
+-.no-indent {
+-    text-indent: 0 !important;
+-}
+-
+-.class-name {
+-    font-weight: bold;
+-    color: #cc6509;
+-    font-family: "Courier New", monospace;
+-}
+-
+-.width-1-2 {
+-    width: 50%;
+-}
+-
+-.width-1-4 {
+-    width: 25%;
+-}
+-
+-.width-3-4 {
+-    width: 75%;
+-}
+-
+-.width-1-3 {
+-    width: 33%;
+-}
+-
+-.width-2-3 {
+-    width: 66%;
+-}
+-
+-.just-center {
+-    justify-content: center;
+-}
+-
+-.just-start {
+-    justify-content: flex-start;
+-}
+-
+-.just-end {
+-    justify-content: flex-end;
+-}
+-
+-.no-border {
+-    border: none;
+-    background-color: white;
+-}
+-
+-.full-height {
+-    flex-grow: 2;
+-}
+-
+-.text-center {
+-    text-align: center;
+-}
+-
+-.icon-wrapper {
+-    width: 64px;
+-    height: 64px;
+-    border-radius: 64px;
+-    font-size: 32px !important;
+-    text-align: center !important;
+-    line-height: 64px !important;
+-    color: white;
+-    background-color: rgba(255, 255, 255, 0);
+-    border: thick solid white;
+-    margin: 4px;
+-}
+diff --git a/index.html b/index.html
+index 0f2d56b..ac44ebb 100644
+--- a/index.html
++++ b/index.html
+@@ -1,60 +1,60 @@
+ <!DOCTYPE html>
+-<html lang="en">
++<html lang="sv">
+ <head>
+   <meta charset="UTF-8">
+-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0" >
++  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Julkalender!</title>
+-  <meta name="theme-color" content="#2e2e2e">
++  <meta name="theme-color" content="#B22222">
+   <link rel="icon" type="image/png" sizes="96x96" href="favicon.png">
+-  <link rel="stylesheet" href="css/app.css"/>
+-  <link rel="stylesheet" href="css/lib/element_styles.css"/>
+-  <link rel="stylesheet" href="css/lib/app_layout.css"/>
+-  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans" rel="stylesheet">
+-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
++  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700" rel="stylesheet">
++  <link rel="stylesheet" href="css/app.css">
+ </head>
+ <body>
+-<textarea id="clipboard">.</textarea>
+-<div class="letterhead">
+-  <div class="letterhead-content">
+-    <div class="al-center">Dags för julkalenderdragningen |
+-      <span style="font-size: .90em">XLENT</span>
+-    </div>
+-  </div>
+-</div>
++<header class="letterhead">
++  <div>Dags för julkalenderdragningen <span class="brand">| XLENT</span></div>
++</header>
++
+ <main>
+-  <canvas id="canvas"></canvas>
+-  <div class="right-pane">
+-    <div class="controls">
+-      <div class="labeled-action name-entry">
+-        <input id="wedge-input" class="content" placeholder="Vilka ska vara med?"/>
+-        <button id="add-wedge">
+-          <i class="fa fa-plus" aria-hidden="true"></i>
+-        </button>
+-      </div>
+-    </div>
+-    <div id="wedge-list">
+-    </div>
+-    <div id="buttons">
+-      <button id="clear-list" class="button stock remove-wedge">Rensa</button>
+-      <button id="copy-link" class="button stock remove-wedge">Copy Link</button>
++  <div id="wheel-wrap">
++    <canvas id="canvas" aria-label="Lyckohjul"></canvas>
++  </div>
++
++  <aside class="panel">
++    <div id="lucka-row">
++      <button id="lucka-prev" class="small-btn" aria-label="Föregående lucka">&#9664;</button>
++      <div id="lucka-label">Lucka</div>
++      <button id="lucka-next" class="small-btn" aria-label="Nästa lucka">&#9654;</button>
+     </div>
+-    <div id="spin-container">
+-      <button id="spin-wheel" class="button stock">Snurra</button>
++    <div id="lucka-info"></div>
++
++    <button id="spin-wheel" class="big-btn">Snurra!</button>
++
++    <h2>Med i hjulet <span class="hint">(tryck för &rdquo;borta idag&rdquo;)</span></h2>
++    <div id="name-list" class="list"></div>
++
++    <h2>Vinnare hittills</h2>
++    <div id="winner-list" class="list"></div>
++
++    <div class="add-row">
++      <input id="name-input" placeholder="Lägg till gäst…" autocomplete="off">
++      <button id="add-name" class="small-btn">+</button>
+     </div>
+-  </div>
++    <button id="reset-winners" class="link-btn">Nollställ alla vinnare</button>
++  </aside>
+ </main>
+-<!--Templates-->
+-<div id="templates" style="display: none">
+-  <!--List Item Template-->
+-  <ListItem>
+-    <div class="list-item labeled-action">
+-      <div class="content">Sample Content</div>
+-      <button class="remove-wedge">
+-        <i class="fa fa-trash" aria-hidden="true"></i>
+-      </button>
++
++<div id="overlay" class="hidden" role="dialog" aria-live="assertive">
++  <div class="overlay-box">
++    <div class="overlay-title">&#127876; Grattis &#127876;</div>
++    <div id="overlay-name"></div>
++    <div id="overlay-lucka"></div>
++    <div class="overlay-buttons">
++      <button id="overlay-ok" class="big-btn">OK</button>
++      <button id="overlay-respin" class="big-btn secondary">Snurra om</button>
+     </div>
+-  </ListItem>
++  </div>
+ </div>
++
++<script src="js/app.js"></script>
+ </body>
+-<script src="js/app.js" ></script>
+ </html>
+diff --git a/js/app.js b/js/app.js
+index 1c0fc72..0823c5d 100644
+--- a/js/app.js
++++ b/js/app.js
+@@ -1,310 +1,658 @@
+-var CANVAS_MID_X;
+-var CANVAS_MID_Y;
+-var WHEEL_PERCENTAGE = .975;
+-var WHEEL_RADIUS;
+-var ROTATION_RESISTANCE =  -45;
+-var ENTER_KEY = 13;
+-var MAX_ROTATION_SPEED = 450;
+-
+-var lastTime;
+-var delta;
+-var runTime = 0.0;
+-var canvas = document.getElementById('canvas');
+-var context = canvas.getContext('2d');
+-var wedgeColorA = '#006400';
+-var wedgeColorB = '#FFD700';
+-var wedgeColorC = '#B22222';
+-var wedgeColorD = '#001F3F';
+-var wedgeSubdiv;
+-var wheelRotation = 90;
+-var rotationSpeed = 0;
+-
+-var btn_addWedge = document.getElementById('add-wedge');
+-var wedge_input = document.getElementById('wedge-input');
+-var wedge_list = document.getElementById('wedge-list');
+-var spin_wheel = document.getElementById('spin-wheel');
+-var clear_list = document.getElementById('clear-list');
+-var copy_link = document.getElementById('copy-link');
+-var templates = document.getElementById('templates');
+-var clipboard = document.getElementById('clipboard');
+-
+-
+-var mobile_break = 425;
+-var desktop_canvas_size = 500;
+-var mobile_canvas_size = 500;
+-var wedge_text_position = .65; // Distance Along Radius
+-
+-var nameList = [];
+-var name_lists = [
+-  ['John', 'Daniel', 'Wallberg', 'Niklas', 'PO', 'Tommy', 'Gustav', 'Ivan','Denny', 'Tobias', 'Larsson', 'Martin', 'Johan W'],
+-  ];
+-
+-var blank_message = 'Jaha, ingen på plats idag?';
+-var is_mobile = false;
+-var last_width = 0;
+-var dirty = false;
+-
+-function setup() {
+-  clipboard.style.opacity = 0;
+-  clipboard.style.width = 0;
+-  clipboard.style.height = 0;
+-  CANVAS_MID_X = canvas.width / 2;
+-  CANVAS_MID_Y = canvas.height / 2;
+-  WHEEL_RADIUS = CANVAS_MID_X * WHEEL_PERCENTAGE;
+-  lastTime = Date.now();
+-
+-  var saved_list = null;
+-  try {
+-    saved_list = JSON.parse(localStorage.getItem('wheel_items'));
+-  } catch (e) {
+-    saved_list = null;
+-  }
+-
+-  if (!Array.isArray(saved_list) || !saved_list.length) {
+-    nameList = name_lists[getRandomInt(0, name_lists.length)].slice();
+-  } else {
+-    nameList = saved_list;
+-  }
+-
+-  var hashString = window.location.hash.substring(1);
+-  if (hashString.length) {
++/*
++ * Julkul – lyckohjul för julkalenderdragningen.
++ *
++ * Deltagarna läses från names.json. Vinnare, vilka som är borta idag och
++ * dagens gäster sparas i webbläsarens localStorage (alltså på TV:n).
++ *
++ * Testa ett visst datum genom att lägga till ?datum=2026-12-05 i adressen.
++ *
++ * Koden är medvetet skriven i "gammal" JavaScript (ES5) så att den fungerar
++ * även i äldre TV-webbläsare.
++ */
++(function () {
++  'use strict';
++
++  // Används bara om names.json inte går att läsa
++  var FALLBACK_NAMES = ['John', 'Daniel', 'Wallberg', 'Niklas', 'PO', 'Tommy', 'Gustav',
++    'Ivan', 'Denny', 'Tobias', 'Larsson', 'Martin', 'Johan W'];
++
++  var STORAGE_KEY = 'julkul_v2';
++  var LAST_LUCKA = 24;
++  var MAX_ROTATION_SPEED = 450;   // grader per sekund
++  var ROTATION_RESISTANCE = 45;   // inbromsning, grader per sekund^2
++  var POINTER_ANGLE = 270;        // pilen sitter högst upp
++  var WEDGE_COLORS = ['#006400', '#FFD700', '#B22222'];
++  var LAST_WEDGE_COLOR = '#001F3F';
++  var BLANK_MESSAGE = 'Jaha, ingen på plats idag?';
++
++  var raf = window.requestAnimationFrame || window.webkitRequestAnimationFrame ||
++    function (cb) { return window.setTimeout(cb, 16); };
++
++  // DOM
++  var canvas = document.getElementById('canvas');
++  var ctx = canvas.getContext('2d');
++  var spinBtn = document.getElementById('spin-wheel');
++  var luckaPrev = document.getElementById('lucka-prev');
++  var luckaNext = document.getElementById('lucka-next');
++  var luckaLabel = document.getElementById('lucka-label');
++  var luckaInfo = document.getElementById('lucka-info');
++  var nameListEl = document.getElementById('name-list');
++  var winnerListEl = document.getElementById('winner-list');
++  var nameInput = document.getElementById('name-input');
++  var addNameBtn = document.getElementById('add-name');
++  var resetBtn = document.getElementById('reset-winners');
++  var overlay = document.getElementById('overlay');
++  var overlayName = document.getElementById('overlay-name');
++  var overlayLucka = document.getElementById('overlay-lucka');
++  var overlayOk = document.getElementById('overlay-ok');
++  var overlayRespin = document.getElementById('overlay-respin');
++
++  // Tillstånd
++  var today = getToday();
++  var testMode = !(today.month === 12 && today.day >= 1 && today.day <= LAST_LUCKA);
++  var lucka = testMode ? null : today.day;
++  var baseNames = FALLBACK_NAMES.slice();
++  var state = loadState();
++  var wheelNames = [];
++  var rotation = Math.random() * 360;
++  var speed = 0;
++  var spinning = false;
++  var lastTime = 0;
++  var pendingWinner = null;
++  var overlayOpen = false;
++  var size = 500;
++  var dpr = 1;
++
++  // ---------- Datum och lagring ----------
++
++  function pad(n) {
++    return (n < 10 ? '0' : '') + n;
++  }
++
++  function getToday() {
++    var m = /[?&]datum=(\d{4})-(\d{1,2})-(\d{1,2})/.exec(window.location.search);
++    var d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date();
++    return {
++      year: d.getFullYear(),
++      month: d.getMonth() + 1,
++      day: d.getDate(),
++      iso: d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate())
++    };
++  }
++
++  function isArray(x) {
++    return Object.prototype.toString.call(x) === '[object Array]';
++  }
++
++  function loadState() {
++    var s = null;
+     try {
+-      var queryList = JSON.parse(decodeURIComponent(hashString));
+-      if (Array.isArray(queryList) && queryList.length) {
+-        nameList = queryList;
+-      }
++      s = JSON.parse(window.localStorage.getItem(STORAGE_KEY));
++    } catch (e) {
++      s = null;
++    }
++    if (!s || typeof s !== 'object') s = {};
++
++    // Nytt år = nya vinnare
++    if (s.year !== today.year || !isArray(s.history)) {
++      s.year = today.year;
++      s.history = [];
++    }
++    // "Borta idag" och gäster gäller bara en dag
++    if (!s.absent || s.absent.date !== today.iso || !isArray(s.absent.names)) {
++      s.absent = { date: today.iso, names: [] };
++    }
++    if (!s.guests || s.guests.date !== today.iso || !isArray(s.guests.names)) {
++      s.guests = { date: today.iso, names: [] };
++    }
++    return s;
++  }
++
++  function saveState() {
++    try {
++      window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+     } catch (e) {
+-      // Ogiltig länk – ignorera och använd sparad lista
++      // Lagring avstängd – appen fungerar ändå, men minns inget
+     }
+   }
+ 
+-  checkIfMobile();
+-  resizeCanvas();
+-  registerInputListeners();
+-  renderList();
+-  loop();
+-  refreshList();
+-}
+-
+-function refreshList() {
+-  renderList();
+-  if (!dirty) {
+-    dirty = true;
+-  } else {
+-    localStorage.setItem('wheel_items', JSON.stringify(nameList));
+-  }
+-}
+-
+-function addItem() {
+-  if (wedge_input && !wedge_input.value) return;
+-  nameList.push(wedge_input.value);
+-  wedge_input.value = '';
+-  refreshList()
+-}
+-
+-function removeItem(index) {
+-  nameList.splice(index, 1);
+-  refreshList();
+-}
+-
+-function spinWheel() {
+-  rotationSpeed += (MAX_ROTATION_SPEED / 2) * (Math.random() * (1.75 - .75) + .75);
+-  rotationSpeed = rotationSpeed > MAX_ROTATION_SPEED ? MAX_ROTATION_SPEED : rotationSpeed;
+-}
+-
+-function clearList() {
+-  nameList = [];
+-  refreshList();
+-}
+-
+-function copyLink() {
+-  var base = window.location.href.split('#')[0];
+-  var link = base + '#' + encodeURIComponent(JSON.stringify(nameList));
+-  if (navigator.clipboard && navigator.clipboard.writeText) {
+-    navigator.clipboard.writeText(link);
+-    return;
+-  }
+-  clipboard.value = link;
+-  clipboard.select();
+-  document.execCommand('copy');
+-  clipboard.blur();
+-}
+-
+-function resizeCanvas() {
+-  canvas.width = is_mobile ? mobile_canvas_size : desktop_canvas_size;
+-  canvas.height = is_mobile ? mobile_canvas_size : desktop_canvas_size;
+-  canvas.style.width = (is_mobile ? mobile_canvas_size : desktop_canvas_size) + 'px';
+-  canvas.style.height = (is_mobile ? mobile_canvas_size : desktop_canvas_size) + 'px';
+-  CANVAS_MID_X = canvas.width / 2;
+-  CANVAS_MID_Y = canvas.height / 2;
+-  WHEEL_RADIUS = CANVAS_MID_X * WHEEL_PERCENTAGE;
+-}
+-
+-function checkIfMobile() {
+-  is_mobile = window.innerWidth < mobile_break;
+-  if (last_width > mobile_break && is_mobile) {
+-    resizeCanvas();
+-  }
+-
+-  if (last_width < mobile_break && !is_mobile) {
+-    resizeCanvas();
+-  }
+-
+-  last_width = window.innerWidth;
+-}
+-
+-function registerInputListeners() {
+-  btn_addWedge.onclick = addItem;
+-  wedge_input.onkeyup = function (e) {
+-    if (e.keyCode === ENTER_KEY) {
+-      addItem();
++  function loadNames(done) {
++    var xhr;
++    try {
++      xhr = new XMLHttpRequest();
++      xhr.open('GET', 'names.json?v=' + Date.now(), true);
++    } catch (e) {
++      done();
++      return;
+     }
+-  };
+-  spin_wheel.onclick = spinWheel;
+-  clear_list.onclick = clearList;
+-  copy_link.onclick = copyLink;
+-}
+-
+-function renderList() {
+-  var record_elem = templates.getElementsByTagName('listitem')[0];
+-  if (record_elem && wedge_list) {
+-    wedge_list.innerHTML = null;
+-    var i = 0;
+-    nameList.forEach(function (elem) {
+-      var template = record_elem.innerHTML;
+-      var instance = document.createElement('div');
+-      instance.innerHTML = template;
+-      var content = instance.getElementsByClassName('content')[0];
+-      var button = instance.getElementsByTagName('button')[0];
+-      if (content && button) {
+-        content.innerHTML = '';
+-        var contentDiv = document.createElement('span');
+-        contentDiv.innerText = elem;
+-        content.appendChild(contentDiv);
+-        button.setAttribute('data-id', i + '');
+-        button.onclick = function (e) {
+-          var id = e.target.getAttribute('data-id');
+-          if (!id) {
+-            id = e.target.parentNode.getAttribute('data-id');
++    xhr.onreadystatechange = function () {
++      if (xhr.readyState !== 4) return;
++      if (xhr.status >= 200 && xhr.status < 300) {
++        try {
++          var data = JSON.parse(xhr.responseText);
++          var list = isArray(data) ? data : data && data.deltagare;
++          var clean = [];
++          if (isArray(list)) {
++            for (var i = 0; i < list.length; i++) {
++              var n = String(list[i]).replace(/^\s+|\s+$/g, '');
++              if (n && clean.indexOf(n) < 0) clean.push(n);
++            }
+           }
+-          removeItem(id);
+-        };
++          if (clean.length) baseNames = clean;
++        } catch (e) {
++          // Felaktig JSON – använd reservlistan
++        }
+       }
+-      wedge_list.appendChild(instance);
+-      i++;
+-    });
++      done();
++    };
++    xhr.send();
++  }
++
++  // ---------- Vem är med i hjulet? ----------
++
++  function participants() {
++    var all = baseNames.slice();
++    for (var i = 0; i < state.guests.names.length; i++) {
++      if (all.indexOf(state.guests.names[i]) < 0) all.push(state.guests.names[i]);
++    }
++    return all;
++  }
++
++  function isAbsent(name) {
++    return state.absent.names.indexOf(name) >= 0;
++  }
++
++  function isGuest(name) {
++    return baseNames.indexOf(name) < 0 && state.guests.names.indexOf(name) >= 0;
++  }
++
++  // Vinster som räknas – den lucka som dras just nu räknas inte, så att man kan dra om den
++  function winsFor(name) {
++    var c = 0;
++    for (var i = 0; i < state.history.length; i++) {
++      var h = state.history[i];
++      if (h.namn === name && h.lucka !== lucka) c++;
++    }
++    return c;
++  }
++
++  function luckorWonBy(name) {
++    var res = [];
++    for (var i = 0; i < state.history.length; i++) {
++      if (state.history[i].namn === name) res.push(state.history[i].lucka);
++    }
++    res.sort(function (a, b) { return a - b; });
++    return res;
++  }
++
++  function historyFor(l) {
++    for (var i = 0; i < state.history.length; i++) {
++      if (state.history[i].lucka === l) return state.history[i];
++    }
++    return null;
++  }
++
++  // Alla närvarande som har vunnit minst antal gånger. När alla har vunnit
++  // en gång börjar det alltså om automatiskt.
++  function computeWheel() {
++    var all = participants();
++    var present = [];
++    var min = Infinity;
++    var i;
++    for (i = 0; i < all.length; i++) {
++      if (!isAbsent(all[i])) {
++        present.push(all[i]);
++        min = Math.min(min, winsFor(all[i]));
++      }
++    }
++    var res = [];
++    for (i = 0; i < present.length; i++) {
++      if (winsFor(present[i]) === min) res.push(present[i]);
++    }
++    return res;
++  }
++
++  // ---------- Panelen ----------
++
++  function el(tag, cls, text) {
++    var e = document.createElement(tag);
++    if (cls) e.className = cls;
++    if (text !== undefined) e.textContent = text;
++    return e;
+   }
+-}
+-
+-// Canvas Methods
+-function fillColor(color) {
+-  context.fillStyle = color;
+-}
+-
+-function strokeColor(color) {
+-  context.strokeStyle = color;
+-}
+-
+-function degRad(deg) {
+-  return deg * (Math.PI / 180);
+-}
+-
+-function loop() {
+-  checkIfMobile();
+-  context.clearRect(0 ,0, canvas.width, canvas.height);
+-  var now = Date.now();
+-  delta = (now - lastTime) / 1000;
+-  if (delta > 0) {
+-    runTime += delta;
+-    wheelRotation += delta * rotationSpeed;
+-  }
+-  lastTime = Date.now();
+-  wedgeSubdiv = 360 / nameList.length;
+-
+-  var x;
+-  var y;
+-  var wedgeRotation;
+-  var list_len = nameList.length;
+-  for (var i = 0; i < list_len; i++) {
+-    context.beginPath();
+-    wedgeRotation = i * wedgeSubdiv + wheelRotation;
+-    x = CANVAS_MID_X + Math.cos(degRad(wedgeRotation)) * WHEEL_RADIUS;
+-    y = CANVAS_MID_Y + Math.sin(degRad(wedgeRotation)) * WHEEL_RADIUS;
+-    context.moveTo(CANVAS_MID_X, CANVAS_MID_Y);
+-
+-    strokeColor('#CDCDCD');
+-    switch (i % 3) {
+-      case 0:
+-        fillColor(wedgeColorA);
+-        break;
+-      case 1:
+-        fillColor(wedgeColorB);
+-        break;
+-      case 2:
+-        fillColor(wedgeColorC);
+-        break;
++
++  function renderPanel() {
++    var i;
++
++    // Lucka
++    if (testMode) {
++      luckaLabel.textContent = 'Testdragning';
++      luckaInfo.textContent = 'Det är inte 1–24 december, så inget sparas.';
++      luckaPrev.disabled = true;
++      luckaNext.disabled = true;
++    } else {
++      luckaLabel.textContent = 'Lucka ' + lucka;
++      var existing = historyFor(lucka);
++      if (existing) {
++        luckaInfo.textContent = 'Redan dragen: ' + existing.namn + ' (snurra för att dra om)';
++      } else if (lucka === today.day) {
++        luckaInfo.textContent = 'Dagens lucka';
++      } else if (lucka < today.day) {
++        luckaInfo.textContent = 'Lucka från en tidigare dag';
++      } else {
++        luckaInfo.textContent = 'Lucka för en kommande dag';
++      }
++      luckaPrev.disabled = lucka <= 1;
++      luckaNext.disabled = lucka >= LAST_LUCKA;
+     }
+ 
+-    if (i === list_len - 1) {
+-      fillColor(wedgeColorD);
++    // Deltagare
++    nameListEl.innerHTML = '';
++    var all = participants();
++    for (i = 0; i < all.length; i++) {
++      (function (name) {
++        var btn = el('button', 'list-item');
++        btn.appendChild(el('span', '', name));
++        var tag = '';
++        if (isAbsent(name)) {
++          btn.className += ' absent';
++          tag = 'borta idag';
++        } else if (wheelNames.indexOf(name) < 0) {
++          btn.className += ' waiting';
++          tag = 'vann lucka ' + luckorWonBy(name).join(', ');
++        } else if (isGuest(name)) {
++          tag = 'gäst';
++        }
++        if (tag) btn.appendChild(el('span', 'tag', tag));
++        btn.setAttribute('data-name', name);
++        btn.onclick = function () { toggleName(name); };
++        nameListEl.appendChild(btn);
++      })(all[i]);
+     }
+ 
+-    context.arc(CANVAS_MID_X, CANVAS_MID_Y, WHEEL_RADIUS, degRad(wedgeRotation), degRad(wedgeRotation + wedgeSubdiv));
+-    context.fill();
+-    if (i !== 0) {
+-      context.stroke();
++    // Vinnare
++    winnerListEl.innerHTML = '';
++    var hist = state.history.slice().sort(function (a, b) { return a.lucka - b.lucka; });
++    if (!hist.length) {
++      winnerListEl.appendChild(el('div', 'list-empty', 'Inga vinnare än'));
+     }
++    for (i = 0; i < hist.length; i++) {
++      (function (h) {
++        var btn = el('button', 'list-item');
++        btn.appendChild(el('span', '', 'Lucka ' + h.lucka + ': ' + h.namn));
++        btn.appendChild(el('span', 'tag', '✕'));
++        btn.onclick = function () { removeWinner(h); };
++        winnerListEl.appendChild(btn);
++      })(hist[i]);
++    }
++
++    resetBtn.style.display = state.history.length ? '' : 'none';
++    spinBtn.disabled = spinning || !wheelNames.length;
++  }
++
++  function refresh() {
++    wheelNames = computeWheel();
++    renderPanel();
++    draw();
+   }
+ 
+-  for (i = 0; i < nameList.length; i++) {
+-    context.beginPath();
+-    wedgeRotation = (i * wedgeSubdiv + wheelRotation) + wedgeSubdiv / 2;
+-    context.textAlign = 'center';
+-    context.font = canvas.width / (is_mobile ? 18 : 24) + 'px Josefin Sans';
+-    fillColor('#FFFFFF');
+-    context.save();
+-    context.translate(
+-        CANVAS_MID_X + Math.cos(degRad(wedgeRotation)) * (WHEEL_RADIUS * wedge_text_position),
+-        CANVAS_MID_Y + Math.sin(degRad(wedgeRotation)) * (WHEEL_RADIUS * wedge_text_position)
+-    );
+-    context.rotate(degRad(wedgeRotation + 180));
+-    context.fillText(nameList[i], 0, 0);
+-    context.restore();
++  function toggleName(name) {
++    if (spinning) return;
++    if (isGuest(name)) {
++      // Gäster tas bort helt när man trycker på dem
++      state.guests.names.splice(state.guests.names.indexOf(name), 1);
++    } else {
++      var idx = state.absent.names.indexOf(name);
++      if (idx >= 0) state.absent.names.splice(idx, 1);
++      else state.absent.names.push(name);
++    }
++    saveState();
++    refresh();
++    // Listan ritas om – behåll markeringen så att nästa OK inte snurrar hjulet av misstag
++    var items = nameListEl.getElementsByTagName('button');
++    var target = spinBtn;
++    for (var i = 0; i < items.length; i++) {
++      if (items[i].getAttribute('data-name') === name) target = items[i];
++    }
++    try { target.focus(); } catch (e) { /* ignorera */ }
+   }
+ 
+-  fillColor('#FFFFFF');
+-  context.beginPath();
+-  context.moveTo(CANVAS_MID_X + canvas.width / 32, canvas.height / 64);
+-  context.lineTo(CANVAS_MID_X - canvas.width / 32, canvas.height / 64);
+-  context.lineTo(CANVAS_MID_X, canvas.height / 18);
+-  context.fill();
++  function addGuest() {
++    var name = nameInput.value.replace(/^\s+|\s+$/g, '');
++    if (!name || spinning) return;
++    if (participants().indexOf(name) < 0) state.guests.names.push(name);
++    var a = state.absent.names.indexOf(name);
++    if (a >= 0) state.absent.names.splice(a, 1);
++    nameInput.value = '';
++    saveState();
++    refresh();
++  }
+ 
+-  if (!nameList.length) {
+-    context.beginPath();
+-    context.textAlign = 'center';
+-    context.font = canvas.width / (is_mobile ? 18 : 24) + 'px Josefin Sans';
+-    fillColor('#000000');
+-    context.fillText(blank_message, CANVAS_MID_X, CANVAS_MID_Y);
+-  } else {
+-    context.beginPath();
+-    context.arc(CANVAS_MID_X, CANVAS_MID_Y, WHEEL_RADIUS / 32, 0, 2 * Math.PI);
+-    context.fill();
++  function removeWinner(h) {
++    if (spinning) return;
++    if (!window.confirm('Ta bort ' + h.namn + ' som vinnare av lucka ' + h.lucka + '?')) return;
++    var idx = state.history.indexOf(h);
++    if (idx >= 0) state.history.splice(idx, 1);
++    saveState();
++    refresh();
++    try { spinBtn.focus(); } catch (e) { /* ignorera */ }
+   }
+ 
+-  rotationSpeed += ROTATION_RESISTANCE * delta;
++  function resetWinners() {
++    if (spinning) return;
++    if (!window.confirm('Ta bort alla vinnare för i år?')) return;
++    state.history = [];
++    saveState();
++    refresh();
++    try { spinBtn.focus(); } catch (e) { /* ignorera */ }
++  }
+ 
+-  if (rotationSpeed < 0) {
+-    rotationSpeed = 0;
++  function changeLucka(delta) {
++    if (testMode || spinning) return;
++    var next = lucka + delta;
++    if (next < 1 || next > LAST_LUCKA) return;
++    lucka = next;
++    refresh();
+   }
+ 
+-  requestAnimationFrame(loop);
+-}
++  // ---------- Hjulet ----------
+ 
+-function getRandomInt(min, max) {
+-  min = Math.ceil(min);
+-  max = Math.floor(max);
+-  return Math.floor(Math.random() * (max - min)) + min; //The maximum is exclusive and the minimum is inclusive
+-}
++  function degRad(deg) {
++    return deg * Math.PI / 180;
++  }
+ 
+-setup();
++  function wedgeColor(i, n) {
++    if (n > 1 && i === n - 1) return LAST_WEDGE_COLOR;
++    return WEDGE_COLORS[i % WEDGE_COLORS.length];
++  }
++
++  function resize() {
++    var vw = window.innerWidth;
++    var vh = window.innerHeight;
++    if (vw <= 700) {
++      size = Math.min(vw * 0.92, 560);
++    } else {
++      size = Math.min(vh * 0.85, vw * 0.6);
++    }
++    size = Math.max(200, Math.floor(size));
++    dpr = Math.min(window.devicePixelRatio || 1, 2);
++    canvas.width = Math.floor(size * dpr);
++    canvas.height = Math.floor(size * dpr);
++    canvas.style.width = size + 'px';
++    canvas.style.height = size + 'px';
++    draw();
++  }
++
++  function draw() {
++    var cx = size / 2;
++    var cy = size / 2;
++    var R = size / 2 * 0.9;
++    var n = wheelNames.length;
++    var i;
++
++    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
++    ctx.clearRect(0, 0, size, size);
++
++    // Kant
++    ctx.beginPath();
++    ctx.arc(cx, cy, R + size * 0.025, 0, Math.PI * 2);
++    ctx.fillStyle = '#1b1b1b';
++    ctx.fill();
++
++    if (!n) {
++      ctx.beginPath();
++      ctx.arc(cx, cy, R, 0, Math.PI * 2);
++      ctx.fillStyle = '#ffffff';
++      ctx.fill();
++      ctx.fillStyle = '#1b1b1b';
++      ctx.textAlign = 'center';
++      ctx.textBaseline = 'middle';
++      ctx.font = Math.round(size / 22) + 'px "Josefin Sans", Arial, sans-serif';
++      ctx.fillText(BLANK_MESSAGE, cx, cy);
++      drawPointer(cx, cy, R);
++      return;
++    }
++
++    var sub = 360 / n;
++
++    // Tårtbitar
++    for (i = 0; i < n; i++) {
++      var start = degRad(rotation + i * sub);
++      ctx.beginPath();
++      ctx.moveTo(cx, cy);
++      ctx.arc(cx, cy, R, start, start + degRad(sub));
++      ctx.closePath();
++      ctx.fillStyle = wedgeColor(i, n);
++      ctx.fill();
++      if (n > 1) {
++        ctx.lineWidth = Math.max(1, size * 0.004);
++        ctx.strokeStyle = '#CDCDCD';
++        ctx.stroke();
++      }
++    }
++
++    // Namn – krymps så att de får plats i sin bit
++    var maxWidth = R * 0.72;
++    var arcHeight = 2 * (R * 0.62) * Math.sin(degRad(Math.min(sub, 90) / 2));
++    var baseFont = Math.min(R * 0.14, arcHeight * 0.75);
++    ctx.textAlign = 'right';
++    ctx.textBaseline = 'middle';
++    for (i = 0; i < n; i++) {
++      var fontSize = baseFont;
++      ctx.font = 'bold ' + fontSize + 'px "Josefin Sans", Arial, sans-serif';
++      var w = ctx.measureText(wheelNames[i]).width;
++      if (w > maxWidth) {
++        fontSize = Math.max(10, fontSize * maxWidth / w);
++        ctx.font = 'bold ' + fontSize + 'px "Josefin Sans", Arial, sans-serif';
++      }
++      ctx.save();
++      ctx.translate(cx, cy);
++      ctx.rotate(degRad(rotation + (i + 0.5) * sub));
++      ctx.fillStyle = wedgeColor(i, n) === '#FFD700' ? '#1b1b1b' : '#ffffff';
++      ctx.fillText(wheelNames[i], R * 0.92, 0);
++      ctx.restore();
++    }
++
++    // Nav i mitten
++    ctx.beginPath();
++    ctx.arc(cx, cy, R * 0.08, 0, Math.PI * 2);
++    ctx.fillStyle = '#ffffff';
++    ctx.fill();
++    ctx.lineWidth = Math.max(2, size * 0.008);
++    ctx.strokeStyle = '#1b1b1b';
++    ctx.stroke();
++
++    drawPointer(cx, cy, R);
++  }
++
++  function drawPointer(cx, cy, R) {
++    var top = cy - R - size * 0.045;
++    ctx.beginPath();
++    ctx.moveTo(cx - size * 0.04, top);
++    ctx.lineTo(cx + size * 0.04, top);
++    ctx.lineTo(cx, cy - R + size * 0.06);
++    ctx.closePath();
++    ctx.fillStyle = '#ffffff';
++    ctx.fill();
++    ctx.lineWidth = Math.max(2, size * 0.006);
++    ctx.strokeStyle = '#1b1b1b';
++    ctx.stroke();
++  }
++
++  function winnerIndex() {
++    var n = wheelNames.length;
++    var sub = 360 / n;
++    var a = ((POINTER_ANGLE - rotation) % 360 + 360) % 360;
++    return Math.min(n - 1, Math.floor(a / sub));
++  }
++
++  function spin() {
++    if (spinning || overlayOpen || !wheelNames.length) return;
++    speed = MAX_ROTATION_SPEED * (0.6 + 0.4 * Math.random());
++    spinning = true;
++    spinBtn.disabled = true;
++    lastTime = Date.now();
++    raf(frame);
++  }
++
++  function frame() {
++    var now = Date.now();
++    var dt = (now - lastTime) / 1000;
++    lastTime = now;
++    if (dt > 0.1) dt = 0.1; // om fliken pausats
++
++    rotation = (rotation + speed * dt) % 360;
++    speed -= ROTATION_RESISTANCE * dt;
++
++    if (speed <= 0) {
++      speed = 0;
++      spinning = false;
++      draw();
++      onStop();
++      return;
++    }
++    draw();
++    raf(frame);
++  }
++
++  // ---------- Vinnarrutan ----------
++
++  function onStop() {
++    pendingWinner = wheelNames[winnerIndex()];
++    overlayName.textContent = pendingWinner;
++    if (testMode) {
++      overlayLucka.textContent = 'Testdragning – inget sparas';
++      overlayOk.textContent = 'OK';
++    } else {
++      overlayLucka.textContent = 'Öppna lucka ' + lucka + '!';
++      overlayOk.textContent = 'Spara vinnaren';
++    }
++    overlay.className = '';
++    overlayOpen = true;
++    try { overlayOk.focus(); } catch (e) { /* ignorera */ }
++  }
++
++  function closeOverlay() {
++    overlay.className = 'hidden';
++    overlayOpen = false;
++    pendingWinner = null;
++  }
++
++  function acceptWinner() {
++    if (!overlayOpen) return;
++    if (!testMode && pendingWinner) {
++      var existing = historyFor(lucka);
++      if (existing) state.history.splice(state.history.indexOf(existing), 1);
++      state.history.push({ lucka: lucka, namn: pendingWinner, datum: today.iso });
++      saveState();
++    }
++    closeOverlay();
++    refresh();
++    try { spinBtn.focus(); } catch (e) { /* ignorera */ }
++  }
++
++  function respin() {
++    closeOverlay();
++    refresh();
++    spin();
++  }
++
++  // ---------- Fjärrkontroll / tangentbord ----------
++
++  function focusables() {
++    var nodes = document.querySelectorAll('.panel button, .panel input');
++    var res = [];
++    for (var i = 0; i < nodes.length; i++) {
++      var n = nodes[i];
++      if (!n.disabled && n.offsetParent !== null) res.push(n);
++    }
++    return res;
++  }
++
++  function moveFocus(dir) {
++    var list = focusables();
++    if (!list.length) return;
++    var idx = list.indexOf(document.activeElement);
++    var next = idx < 0 ? list.indexOf(spinBtn) : idx + dir;
++    if (next < 0) next = 0;
++    if (next >= list.length) next = list.length - 1;
++    list[next].focus();
++  }
++
++  function onKeyDown(e) {
++    var k = e.keyCode;
++    var active = document.activeElement;
++    var typing = active && active.tagName === 'INPUT';
++
++    if (overlayOpen) {
++      if (k >= 37 && k <= 40) {
++        (active === overlayOk ? overlayRespin : overlayOk).focus();
++        e.preventDefault();
++      } else if (k === 13 && active !== overlayOk && active !== overlayRespin) {
++        acceptWinner();
++        e.preventDefault();
++      } else if (k === 27) {
++        closeOverlay();
++        refresh();
++      }
++      return;
++    }
++
++    if (typing) {
++      if (k === 13) {
++        addGuest();
++        e.preventDefault();
++      } else if (k === 38 || k === 40) {
++        moveFocus(k === 40 ? 1 : -1);
++        e.preventDefault();
++      }
++      return;
++    }
++
++    if (k === 13 || k === 32) {
++      // Enter på en knapp klickar på knappen; annars snurrar vi
++      if (!active || active === document.body || active === canvas) {
++        spin();
++        e.preventDefault();
++      }
++    } else if (k === 38 || k === 40) {
++      moveFocus(k === 40 ? 1 : -1);
++      e.preventDefault();
++    } else if (k === 37 || k === 39) {
++      changeLucka(k === 39 ? 1 : -1);
++      e.preventDefault();
++    }
++  }
++
++  // ---------- Start ----------
++
++  function init() {
++    spinBtn.onclick = spin;
++    canvas.onclick = spin;
++    luckaPrev.onclick = function () { changeLucka(-1); };
++    luckaNext.onclick = function () { changeLucka(1); };
++    addNameBtn.onclick = addGuest;
++    resetBtn.onclick = resetWinners;
++    overlayOk.onclick = acceptWinner;
++    overlayRespin.onclick = respin;
++    document.addEventListener('keydown', onKeyDown);
++
++    var resizeTimer = null;
++    window.addEventListener('resize', function () {
++      window.clearTimeout(resizeTimer);
++      resizeTimer = window.setTimeout(resize, 100);
++    });
++
++    saveState();
++    refresh();
++    resize();
++    try { spinBtn.focus(); } catch (e) { /* ignorera */ }
++
++    // Rita om när typsnittet laddats, annars kan namnen mätas med fel typsnitt
++    if (document.fonts && document.fonts.ready) {
++      document.fonts.ready.then(draw);
++    }
++  }
+ 
++  loadNames(init);
++})();
+diff --git a/names.json b/names.json
+new file mode 100644
+index 0000000..e665a53
+--- /dev/null
++++ b/names.json
+@@ -0,0 +1,17 @@
++{
++  "deltagare": [
++    "John",
++    "Daniel",
++    "Wallberg",
++    "Niklas",
++    "PO",
++    "Tommy",
++    "Gustav",
++    "Ivan",
++    "Denny",
++    "Tobias",
++    "Larsson",
++    "Martin",
++    "Johan W"
++  ]
++}
+-- 
+2.43.0
+
