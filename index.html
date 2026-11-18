@@ -1,60 +1,60 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0" >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Julkalender!</title>
-  <meta name="theme-color" content="#2e2e2e">
+  <meta name="theme-color" content="#B22222">
   <link rel="icon" type="image/png" sizes="96x96" href="favicon.png">
-  <link rel="stylesheet" href="css/app.css"/>
-  <link rel="stylesheet" href="css/lib/element_styles.css"/>
-  <link rel="stylesheet" href="css/lib/app_layout.css"/>
-  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Josefin+Sans:400,700" rel="stylesheet">
+  <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
-<textarea id="clipboard">.</textarea>
-<div class="letterhead">
-  <div class="letterhead-content">
-    <div class="al-center">Dags för julkalenderdragningen |
-      <span style="font-size: .90em">XLENT</span>
-    </div>
-  </div>
-</div>
+<header class="letterhead">
+  <div>Dags för julkalenderdragningen <span class="brand">| XLENT</span></div>
+</header>
+
 <main>
-  <canvas id="canvas"></canvas>
-  <div class="right-pane">
-    <div class="controls">
-      <div class="labeled-action name-entry">
-        <input id="wedge-input" class="content" placeholder="Vilka ska vara med?"/>
-        <button id="add-wedge">
-          <i class="fa fa-plus" aria-hidden="true"></i>
-        </button>
-      </div>
+  <div id="wheel-wrap">
+    <canvas id="canvas" aria-label="Lyckohjul"></canvas>
+  </div>
+
+  <aside class="panel">
+    <div id="lucka-row">
+      <button id="lucka-prev" class="small-btn" aria-label="Föregående lucka">&#9664;</button>
+      <div id="lucka-label">Lucka</div>
+      <button id="lucka-next" class="small-btn" aria-label="Nästa lucka">&#9654;</button>
     </div>
-    <div id="wedge-list">
+    <div id="lucka-info"></div>
+
+    <button id="spin-wheel" class="big-btn">Snurra!</button>
+
+    <h2>Med i hjulet <span class="hint">(tryck för &rdquo;borta idag&rdquo;)</span></h2>
+    <div id="name-list" class="list"></div>
+
+    <h2>Vinnare hittills</h2>
+    <div id="winner-list" class="list"></div>
+
+    <div class="add-row">
+      <input id="name-input" placeholder="Lägg till gäst…" autocomplete="off">
+      <button id="add-name" class="small-btn">+</button>
     </div>
-    <div id="buttons">
-      <button id="clear-list" class="button stock remove-wedge">Rensa</button>
-      <button id="copy-link" class="button stock remove-wedge">Copy Link</button>
-    </div>
-    <div id="spin-container">
-      <button id="spin-wheel" class="button stock">Snurra</button>
+    <button id="reset-winners" class="link-btn">Nollställ alla vinnare</button>
+  </aside>
+</main>
+
+<div id="overlay" class="hidden" role="dialog" aria-live="assertive">
+  <div class="overlay-box">
+    <div class="overlay-title">&#127876; Grattis &#127876;</div>
+    <div id="overlay-name"></div>
+    <div id="overlay-lucka"></div>
+    <div class="overlay-buttons">
+      <button id="overlay-ok" class="big-btn">OK</button>
+      <button id="overlay-respin" class="big-btn secondary">Snurra om</button>
     </div>
   </div>
-</main>
-<!--Templates-->
-<div id="templates" style="display: none">
-  <!--List Item Template-->
-  <ListItem>
-    <div class="list-item labeled-action">
-      <div class="content">Sample Content</div>
-      <button class="remove-wedge">
-        <i class="fa fa-trash" aria-hidden="true"></i>
-      </button>
-    </div>
-  </ListItem>
 </div>
+
+<script src="js/app.js"></script>
 </body>
-<script src="js/app.js" ></script>
 </html>

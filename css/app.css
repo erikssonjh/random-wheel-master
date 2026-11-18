@@ -1,186 +1,316 @@
-body {
-    display: flex;
-    margin-top: 32px;
-    justify-content: space-between;
-    font-family: sans-serif;
-    flex-direction: column;
-    align-items: center;
+/* Julkul – layout för TV (1920x1080 / 960x540) men fungerar även på dator och mobil */
+
+* {
+    box-sizing: border-box;
 }
 
-main {
-    display: flex;
-    flex-direction: row;
-    justify-content: space-around;
-    flex-wrap: wrap;
-    width: 100%;
-    max-width: 920px;
-}
-
-#ad-unit {
-    width: 65%;
-    margin: auto;
-}
-
-#buttons button {
-    width: 50%;
-    border-radius: 0;
-    border: thin solid #006400;
-    background-color: green;
-    transition: all 300ms;
-}
-
-#buttons button:hover {
-    transition: all 300ms;
-    background-color: red;
-    color: black;
-}
-
-
-#spin-wheel {
-    background-color: #006400;
-    font-size: 1.45em;
-    height: 3em;
-    width: 100%;
-    font-style: italic;
-}
-
-#buttons {
-    display: flex;
-    padding: 0;
+html, body {
     margin: 0;
-}
-
-#wedge-list {
-    flex-grow: 0;
-    overflow-y: scroll;
-    height: 350px;
-    border-radius: 4px 4px 0 0;
-    border: thin solid #eaeaea;
-    box-shadow: inset 0 0 2px 1px rgba(151, 151, 151, 0.09);
-}
-
-
-.name-entry button {
-    border-radius: 0;
-}
-
-.remove-wedge {
-    background-color: #8e8e8e;
-}
-
-.right-pane {
-    border: 4px solid black;
-    border-radius: 8px 8px 0 0;
-    padding: 8px;
-    margin: 8px;
-    display: flex;
-    justify-content: space-between;
-    flex-direction: column;
-    width: 256px;
-}
-
-
-#canvas {
-    padding-left: 0;
-    padding-right: 0;
-    display: block;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
-    border: 3px solid black;
-    border-radius: 300px;
-    width: 512px;
-    height: 512px;
-}
-
-
-/*Label With Action*/
-.labeled-action {
-    margin: 8px;
-    height: 32px;
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-    border-top-left-radius: 4px;
-    border-bottom-left-radius: 4px;
-    box-shadow: 0 3px 5px 0 rgba(0, 0, 0, 0.12);
-    text-overflow: ellipsis;
-}
-
-.labeled-action div {
-    padding: 8px;
-    text-overflow: ellipsis;
-    display: block;
-    white-space: nowrap;
+    padding: 0;
+    height: 100%;
+    background: #f6f1e7;
+    color: #1b1b1b;
+    font-family: 'Josefin Sans', Arial, sans-serif;
     overflow: hidden;
 }
 
-.labeled-action input {
-    padding-left: 4px;
-    font-size: 14px;
-    border-style: none;
-    flex-grow: .7;
-}
-
-input:focus {
-    outline: none;
-}
-
-.labeled-action button {
-    height: 32px;
-    width: 32px;
-    background-color: #006400;
+.letterhead {
+    height: 9vh;
+    min-height: 48px;
+    background-color: #B22222;
     color: white;
-    border-bottom-right-radius: 4px;
-    border-top-right-radius: 4px;
-    border-style: none;
-    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4vh;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-.labeled-action button:active {
-    outline: none;
-    box-shadow: inset 0 3px 5px 0 rgba(0, 0, 0, 0.12);
+.letterhead .brand {
+    font-size: .8em;
+    opacity: .85;
 }
 
-.labeled-action button:focus {
-    outline: none;
+main {
+    height: 91vh;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding: 2vh 2vw;
 }
 
-.labeled-action button:hover {
-    transition: all 300ms;
-    background-color: white;
-    color: black;
-    border: thin solid black;
+#wheel-wrap {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 3vw;
 }
 
-.footer {
-    margin-top: 16px;
+#canvas {
+    display: block;
+    cursor: pointer;
+}
+
+.panel {
+    flex: 0 1 30vw;
+    max-width: 520px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    border: 4px solid #1b1b1b;
+    border-radius: 12px;
+    padding: 1.5vh 1.2vw;
+    font-size: 2.2vh;
+}
+
+.panel h2 {
+    font-size: 2.4vh;
+    margin: 1.4vh 0 .6vh;
+}
+
+.hint {
+    font-weight: normal;
+    font-size: .75em;
+    opacity: .6;
+}
+
+#lucka-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+#lucka-label {
+    font-size: 5vh;
+    font-weight: bold;
+    color: #B22222;
+    text-align: center;
+    flex: 1;
+}
+
+#lucka-info {
+    text-align: center;
+    min-height: 2.6vh;
+    font-size: 2vh;
+    opacity: .75;
+    margin-bottom: 1vh;
+}
+
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.big-btn {
+    width: 100%;
+    font-size: 4.5vh;
+    font-weight: bold;
+    padding: 1.6vh 0;
+    border: none;
+    border-radius: 10px;
+    background: #006400;
+    color: white;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+}
+
+.big-btn:disabled {
+    background: #8a8a8a;
+    cursor: default;
+}
+
+.big-btn.secondary {
+    background: #555;
+}
+
+.small-btn {
+    font-size: 3vh;
+    min-width: 6vh;
+    height: 6vh;
+    border: none;
+    border-radius: 8px;
+    background: #006400;
+    color: white;
+}
+
+.small-btn:disabled {
+    visibility: hidden;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: #777;
+    font-size: 1.7vh;
+    text-decoration: underline;
+    margin-top: .8vh;
+    padding: .4vh;
+}
+
+/* Tydlig markering när man flyttar med fjärrkontrollens piltangenter */
+button:focus, input:focus {
+    outline: 0.6vh solid #FFD700;
+    outline-offset: 0.3vh;
+}
+
+.list {
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: .4vh;
+}
+
+#name-list {
+    flex: 1 1 auto;
+    min-height: 10vh;
+}
+
+#winner-list {
+    flex: 0 1 auto;
+    max-height: 22vh;
+    min-height: 4vh;
+}
+
+.list-item {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border: none;
+    background: #f1f1f1;
+    border-radius: 6px;
+    margin: .3vh 0;
+    padding: .7vh 1vh;
+    font-size: 2.3vh;
+    text-align: left;
+    color: #1b1b1b;
+}
+
+.list-item.absent {
+    text-decoration: line-through;
+    opacity: .45;
+}
+
+.list-item.waiting {
+    opacity: .6;
+}
+
+.list-item .tag {
+    font-size: .8em;
+    opacity: .7;
+    margin-left: 1vh;
+    white-space: nowrap;
+    text-decoration: none;
+}
+
+.list-empty {
     opacity: .5;
-    text-decoration: none;
+    padding: .7vh 1vh;
+    font-style: italic;
 }
 
-.footer a {
-    text-decoration: none;
+.add-row {
+    display: flex;
+    margin-top: 1.2vh;
 }
 
-@media (max-width: 425px) {
+.add-row input {
+    flex: 1;
+    min-width: 0;
+    font-size: 2.3vh;
+    padding: 0 1vh;
+    border: 1px solid #bbb;
+    border-radius: 8px 0 0 8px;
+    font-family: inherit;
+}
+
+.add-row .small-btn {
+    border-radius: 0 8px 8px 0;
+}
+
+/* Vinnarrutan */
+#overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+#overlay.hidden {
+    display: none;
+}
+
+.overlay-box {
+    background: #fffdf5;
+    border: 1vh solid #B22222;
+    border-radius: 3vh;
+    padding: 5vh 6vw;
+    text-align: center;
+    min-width: 50vw;
+    box-shadow: 0 2vh 6vh rgba(0, 0, 0, 0.5);
+}
+
+.overlay-title {
+    font-size: 6vh;
+    color: #006400;
+}
+
+#overlay-name {
+    font-size: 16vh;
+    font-weight: bold;
+    color: #B22222;
+    line-height: 1.1;
+    margin: 2vh 0;
+    word-break: break-word;
+}
+
+#overlay-lucka {
+    font-size: 5vh;
+    margin-bottom: 4vh;
+}
+
+.overlay-buttons {
+    display: flex;
+}
+
+.overlay-buttons .big-btn {
+    margin: 0 1vw;
+}
+
+/* Mobil / smal skärm */
+@media (max-width: 700px) {
+    html, body {
+        overflow: auto;
+    }
+
     main {
-        flex-direction: column-reverse;
-        align-items: center;
-        justify-content: flex-start;
-        width: 100VW !important;
-        max-width: initial !important;
+        height: auto;
+        flex-direction: column;
     }
 
-    #canvas {
-        width: 90vw;
-        height: 90vw;
+    #wheel-wrap {
+        margin: 0 0 2vh 0;
     }
 
-    .right-pane {
-        width: 85%;
+    .panel {
+        width: 100%;
+        max-width: none;
+        height: auto;
+        font-size: 16px;
     }
 
-    #wedge-list {
-        height: 256px;
-    }
+    .panel h2 { font-size: 17px; }
+    .list-item, .add-row input { font-size: 16px; }
+    #lucka-label { font-size: 30px; }
+    .big-btn { font-size: 26px; }
+    .small-btn { font-size: 20px; height: 44px; min-width: 44px; }
+    #name-list { max-height: 40vh; }
 }
