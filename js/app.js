@@ -166,16 +166,6 @@
     return baseNames.indexOf(name) < 0 && state.guests.names.indexOf(name) >= 0;
   }
 
-  // Vinster som räknas – den lucka som dras just nu räknas inte, så att man kan dra om den
-  function winsFor(name) {
-    var c = 0;
-    for (var i = 0; i < state.history.length; i++) {
-      var h = state.history[i];
-      if (h.namn === name && h.lucka !== lucka) c++;
-    }
-    return c;
-  }
-
   function luckorWonBy(name) {
     var res = [];
     for (var i = 0; i < state.history.length; i++) {
@@ -192,22 +182,13 @@
     return null;
   }
 
-  // Alla närvarande som har vunnit minst antal gånger. När alla har vunnit
-  // en gång börjar det alltså om automatiskt.
+  // Alla som är på plats är med i hjulet varje dag – samma chans för alla,
+  // oavsett om man vunnit tidigare.
   function computeWheel() {
     var all = participants();
-    var present = [];
-    var min = Infinity;
-    var i;
-    for (i = 0; i < all.length; i++) {
-      if (!isAbsent(all[i])) {
-        present.push(all[i]);
-        min = Math.min(min, winsFor(all[i]));
-      }
-    }
     var res = [];
-    for (i = 0; i < present.length; i++) {
-      if (winsFor(present[i]) === min) res.push(present[i]);
+    for (var i = 0; i < all.length; i++) {
+      if (!isAbsent(all[i])) res.push(all[i]);
     }
     return res;
   }
@@ -257,11 +238,10 @@
         if (isAbsent(name)) {
           btn.className += ' absent';
           tag = 'borta idag';
-        } else if (wheelNames.indexOf(name) < 0) {
-          btn.className += ' waiting';
-          tag = 'vann lucka ' + luckorWonBy(name).join(', ');
-        } else if (isGuest(name)) {
-          tag = 'gäst';
+        } else {
+          var won = luckorWonBy(name);
+          if (isGuest(name)) tag = 'gäst';
+          if (won.length) tag += (tag ? ', ' : '') + 'vann lucka ' + won.join(', ');
         }
         if (tag) btn.appendChild(el('span', 'tag', tag));
         btn.setAttribute('data-name', name);

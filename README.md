@@ -4,12 +4,12 @@ Ett hjul som slumpar fram vem som får öppna dagens lucka. Byggt för att köra
 
 ### Så används det
 - **Snurra:** tryck på *Snurra!*, på hjulet eller på OK/Enter.
-- **Vinnaren** visas i stor text. *Spara vinnaren* sparar och tar bort personen ur hjulet. *Snurra om* drar på nytt utan att spara.
+- **Vinnaren** visas i stor text. *Spara vinnaren* sparar vinnaren för luckan. *Snurra om* drar på nytt utan att spara.
 - **Lucka:** sätts automatiskt till dagens datum (1–24 december). Byt med ◀ ▶ eller vänster- och högerpil, till exempel för helgluckor.
 - **Borta idag:** tryck på ett namn i listan. Det gäller bara idag.
 - **Gäst:** skriv ett namn och tryck +. Gäster är med bara idag.
 - **Vinnare hittills:** tryck på en rad för att ta bort en felaktig vinnare.
-- När alla har vunnit en gång är alla med i hjulet igen.
+- Alla som är på plats är med i hjulet varje dag, även de som vunnit tidigare. Alla har alltså samma chans varje dag.
 - Utanför 1–24 december körs en **testdragning**, och då sparas ingenting.
 
 ### Ändra deltagare

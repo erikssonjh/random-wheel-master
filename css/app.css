@@ -193,10 +193,6 @@ button:focus, input:focus {
     opacity: .45;
 }
 
-.list-item.waiting {
-    opacity: .6;
-}
-
 .list-item .tag {
     font-size: .8em;
     opacity: .7;
